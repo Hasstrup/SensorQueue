@@ -36,6 +36,14 @@ func main() {
 	defer ch.Close()
 
 	dataQueue := qutils.GetQueue(*name, ch)
+	// the queue being created here holds tha value for
+	// all the newly created queues
+	msg := amqp.Publishing{Body: []byte(*name)}
+	ch.Publish("amq.fanout",
+		"", //doing this creates a fanout exchange, so that it sends the message to all connected queues
+		false,
+		false,
+		msg)
 
 	dur, _ := time.ParseDuration(strconv.Itoa(1000/int(*freq)) + "ms")
 	signal := time.Tick(dur)
@@ -44,6 +52,7 @@ func main() {
 
 	for range signal {
 		calcValue()
+
 		reading := dto.SensorMessage{
 			Name:      *name,
 			Value:     value,
@@ -61,7 +70,7 @@ func main() {
 			false,
 			false,
 			msg)
-		log.Printf("The value is :%v\n", value)
+		log.Printf("Sent :%v\n", value)
 	}
 }
 
