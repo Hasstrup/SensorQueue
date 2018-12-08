@@ -58,7 +58,9 @@ func main() {
 			Value:     value,
 			Timestamp: time.Now(),
 		}
+
 		buf.Reset()
+		enc = gob.NewEncoder(buf)
 		enc.Encode(reading)
 
 		msg := amqp.Publishing{
