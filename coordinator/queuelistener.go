@@ -48,8 +48,12 @@ func (ql *QueueListener) ListenForNewSource() {
 		false,
 		nil)
 
-	for msg := range msgs {
+	ql.DiscoverSensors()
 
+	fmt.Println("Listening for new sources")
+
+	for msg := range msgs {
+		fmt.Println("New source discovered")
 		sourceChan, _ := ql.ch.Consume(
 			string(msg.Body),
 			"",
@@ -74,12 +78,33 @@ func (ql *QueueListener) AddListener(msgs <-chan amqp.Delivery) {
 		sd := new(dto.SensorMessage)
 		d.Decode(sd)
 
-		eventData := EventData{
+		fmt.Printf("Received message %v\n", sd)
+
+		ed := EventData{
 			Name:      sd.Name,
 			Value:     sd.Value,
 			Timestamp: sd.Timestamp,
 		}
 
-		fmt.Printf("Received message %v\n", sd)
+		ql.ea.PublishEvent("MessageReceived_"+msg.RoutingKey, ed)
 	}
+}
+
+func (ql *QueueListener) DiscoverSensors() {
+	ql.ch.ExchangeDeclare(
+		qutils.SensorDiscoveryExchange,
+		"fanout",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	ql.ch.Publish(
+		qutils.SensorDiscoveryExchange,
+		"",
+		false,
+		false,
+		amqp.Publishing{})
 }

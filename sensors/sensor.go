@@ -38,12 +38,18 @@ func main() {
 	dataQueue := qutils.GetQueue(*name, ch)
 	// the queue being created here holds tha value for
 	// all the newly created queues
-	msg := amqp.Publishing{Body: []byte(*name)}
-	ch.Publish("amq.fanout",
-		"", //doing this creates a fanout exchange, so that it sends the message to all connected queues
+	publishQueueName(ch)
+
+	discoveryQueue := qutils.GetQueue("", ch)
+
+	ch.QueueBind(
+		discoveryQueue.Name,
+		"",
+		qutils.SensorDiscoveryExchange,
 		false,
-		false,
-		msg)
+		nil)
+
+	go listenForDiscoverRequests(discoveryQueue.Name, ch)
 
 	dur, _ := time.ParseDuration(strconv.Itoa(1000/int(*freq)) + "ms")
 	signal := time.Tick(dur)
@@ -88,4 +94,27 @@ func calcValue() {
 	}
 
 	value += r.Float64()*(maxStep-minStep) + minStep
+}
+
+func publishQueueName(ch *amqp.Channel) {
+	msg := amqp.Publishing{Body: []byte(*name)}
+	ch.Publish("amq.fanout",
+		"", //doing this creates a fanout exchange, so that it sends the message to all connected queues
+		false,
+		false,
+		msg)
+}
+
+func listenForDiscoverRequests(name string, ch *amqp.Channel) {
+	msgs, _ := ch.Consume(
+		name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil)
+	for range msgs {
+		publishQueueName(ch)
+	}
 }
