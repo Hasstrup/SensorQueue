@@ -35,12 +35,12 @@ func main() {
 	defer conn.Close()
 	defer ch.Close()
 
-	dataQueue := qutils.GetQueue(*name, ch)
+	dataQueue := qutils.GetQueue(*name, ch, false)
 	// the queue being created here holds tha value for
 	// all the newly created queues
 	publishQueueName(ch)
 
-	discoveryQueue := qutils.GetQueue("", ch)
+	discoveryQueue := qutils.GetQueue("", ch, true)
 
 	ch.QueueBind(
 		discoveryQueue.Name,
